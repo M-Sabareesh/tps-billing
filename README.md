@@ -26,7 +26,7 @@ Clone the Repository:
 
 bash
 Copy code
-git clone https://github.com/your-username/tps-gold-billing.git
+git clone (https://github.com/M-Sabareesh/tps-billing)
 cd tps-gold-billing
 Backend Setup:
 
@@ -91,7 +91,7 @@ Dashboard: A comprehensive dashboard displaying key billing statistics.
 Folder Structure
 lua
 Copy code
-tps-gold-billing/
+tps-billing/
 |-- backend/
 |   |-- billing/
 |   |   |-- migrations/
