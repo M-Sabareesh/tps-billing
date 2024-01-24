@@ -5,7 +5,7 @@ from .models import Invoice, Item
 
 from django.core.exceptions import PermissionDenied
 
-class InvoceViewSet(viewsets.ModelViewSet):
+class InvoiceViewSet(viewsets.ModelViewSet):
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()
 
@@ -14,7 +14,11 @@ class InvoceViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         team = self.request.user.teams.first()
-        serializer.save(created_by=self.request.user, team=team)
+        invoice_number = team.first_invoice_number
+        team.first_invoice_number = invoice_number + 1
+        team.save()
+        
+        serializer.save(created_by=self.request.user, team=team, modified_by=self.request.user, invoice_number=invoice_number)
 
     def perform_update(self, serializer):
         obj = self.get_object()
