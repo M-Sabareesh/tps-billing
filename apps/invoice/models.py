@@ -1,3 +1,6 @@
+import decimal
+
+from datetime import timedelta
 from django.contrib.auth.models import User
 from django.db import models
 
@@ -30,9 +33,11 @@ class Invoice(models.Model):
     is_credit_for = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True)
     is_sent = models.BooleanField(default=False)
     is_paid = models.BooleanField(default=False)
+    bank_account = models.CharField(max_length=255, blank=True, null=True)
     gross_amount = models.DecimalField(max_digits=12, decimal_places=2)
     vat_amount = models.DecimalField(max_digits=12, decimal_places=2)
     net_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    making_charge = models.DecimalField(max_digits=12, decimal_places=2)
     discount_amount = models.DecimalField(max_digits=12, decimal_places=2)
     team = models.ForeignKey(Team, related_name='invoices', on_delete=models.CASCADE)
     client = models.ForeignKey(Client, related_name='invoices', on_delete=models.CASCADE)
@@ -43,19 +48,30 @@ class Invoice(models.Model):
 
     class Meta:
         ordering = ('-created_at',)
+    
+    def get_due_date(self):
+        return self.created_at + timedelta(days=self.due_days)
 
 class Item(models.Model):
     invoice = models.ForeignKey(Invoice, related_name='items', on_delete=models.CASCADE)
-    title = models.CharField(max_length=255)
+    metal = models.CharField(max_length=255, null= True)
+    jewel = models.CharField(max_length=255, null= True)
+    title = models.CharField(max_length=255, blank=True, null= True)
     quantity = models.IntegerField(default=1)
     price_per_gram = models.DecimalField(max_digits=12, decimal_places=2, null= True)
     item_weight = models.DecimalField(max_digits=12, decimal_places=2, null= True)
+    stone_weight = models.DecimalField(max_digits=12, decimal_places=2, null= True)
+    wastage = models.DecimalField(max_digits=12, decimal_places=2, null= True)
     net_weight = models.DecimalField(max_digits=12, decimal_places=2, null= True)
+    stone_price = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     making_charges_percentage = models.DecimalField(max_digits=12, decimal_places=2, null= True)
     making_charges = models.DecimalField(max_digits=12, decimal_places=2, null=True)
-    stone_price = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     net_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     vat_percentage = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     vat_rate = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     discount = models.DecimalField(max_digits=12, decimal_places=2, null=True)
+
+    def get_gross_amount(self):
+        vat_rate = decimal.Decimal(self.vat_rate/100)
+        return round(self.net_amount + (self.net_amount * vat_rate) + self.making_charges, 2)

@@ -11,10 +11,16 @@ class ItemSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "title",
+            "metal",
+            "jewel",
+            "stone_weight",
+            "wastage",
+            "stone_price",
+            "quantity",
             "price_per_gram",
             "item_weight",
             "making_charges",
-            "stone_price",
+            "net_weight",
             "net_amount",
             "vat_rate",
             "discount"
@@ -22,6 +28,7 @@ class ItemSerializer(serializers.ModelSerializer):
 
 class InvoiceSerializer(serializers.ModelSerializer):   
     items = ItemSerializer(many=True)
+    bank_account = serializers.CharField(required=False)
     class Meta:
         model = Invoice
         read_only_fields = (
@@ -56,6 +63,8 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "net_amount",
             "discount_amount",
             "items",
+            "bank_account",
+            "created_at",
         )
     
     def create(self, validated_data):

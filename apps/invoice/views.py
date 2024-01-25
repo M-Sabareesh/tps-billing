@@ -1,9 +1,19 @@
+import pdfkit
+
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.template.loader import get_template
 from rest_framework import viewsets
+from rest_framework import status, authentication, permissions
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.response import Response
 
 from .serializers import InvoiceSerializer, ItemSerializer
 from .models import Invoice, Item
 
-from django.core.exceptions import PermissionDenied
+from apps.team.models import Team
+
 
 class InvoiceViewSet(viewsets.ModelViewSet):
     serializer_class = InvoiceSerializer
@@ -18,7 +28,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         team.first_invoice_number = invoice_number + 1
         team.save()
         
-        serializer.save(created_by=self.request.user, team=team, modified_by=self.request.user, invoice_number=invoice_number)
+        serializer.save(created_by=self.request.user, team=team, modified_by=self.request.user, invoice_number=invoice_number, bank_account= team.bank_account)
 
     def perform_update(self, serializer):
         obj = self.get_object()
@@ -28,10 +38,19 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         
         serializer.save()
 
-class ItemViewSet(viewsets.ModelViewSet):
-    serializer_class = ItemSerializer
-    queryset = Item.objects.all()
+@api_view(['GET'])
+@authentication_classes([authentication.TokenAuthentication])
+@permission_classes([permissions.IsAuthenticated])
+def generate_pdf(request, invoice_id):
+    invoice = get_object_or_404(Invoice, pk=invoice_id, created_by=request.user)
+    team = Team.objects.filter(created_by=request.user).first()
+    template = get_template('pdf.html')
+    html = template.render({'invoice':invoice, 'team':team})
+    config = pdfkit.configuration(wkhtmltopdf='C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe')
+    #pdfkit.from_file('input.html', 'output.pdf', configuration=config)
+    pdf = pdfkit.from_string(html, False, options={}, configuration=config)
 
-    def get_queryset(self):
-        invoice_id = self.request.GET.get('invoice_id', 0)
-        return self.queryset.filter(invoice__id=invoice_id)
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="invoice.pdf"'
+
+    return response

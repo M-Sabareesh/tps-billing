@@ -19,7 +19,7 @@ class TeamViewSet(viewsets.ModelViewSet):
         serializer.save(created_by=self.request.user)
 
     def perform_update(self, serializer):
-        obj = self.get_objed()
+        obj = self.get_object()
 
         if self.request.user != obj.created_by:
             raise PermissionDenied("Wrong object owner")
