@@ -161,8 +161,11 @@
             <div class="top-left">
                 <div class="invoicely">
                     <h3>{{ team.name }}</h3>
-                    <p>Thiruvazhiyode Post</p>
-                    <p>Palakkad District, Kerala - 679514</p>
+                    <p>{{ team.address1 }}</p>
+                    <p>{{ team.address2 }}</p>
+                    {% if team.zipcode or team.place %}
+                        <p> {{ team.zipcode }} {{ team.place }} </p>
+                    {% endif %}
                 </div>
 
                 <div class="client">
@@ -183,7 +186,7 @@
 
                 <div class="split">
                     <div class="split-left">Email</div>
-                    <div class="split-right">suresh.goldstar@gmail.com</div>
+                    <div class="split-right"> {{ team.email }} </div>
                 </div>
 
                 <div class="split">
