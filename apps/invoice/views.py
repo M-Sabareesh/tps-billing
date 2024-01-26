@@ -1,6 +1,7 @@
 import pdfkit
 
 from django.core.exceptions import PermissionDenied
+from django.core.mail import EmailMultiAlternatives
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import get_template
@@ -44,7 +45,11 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 def generate_pdf(request, invoice_id):
     invoice = get_object_or_404(Invoice, pk=invoice_id, created_by=request.user)
     team = Team.objects.filter(created_by=request.user).first()
-    template = get_template('pdf.html')
+    template_name = 'pdf.html'
+    if invoice.is_credit_for:
+        template_name = 'pdf_credit_note.html'
+    template = get_template(template_name)
+
     html = template.render({'invoice':invoice, 'team':team})
     config = pdfkit.configuration(wkhtmltopdf='C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe')
     #pdfkit.from_file('input.html', 'output.pdf', configuration=config)
@@ -54,3 +59,33 @@ def generate_pdf(request, invoice_id):
     response['Content-Disposition'] = 'attachment; filename="invoice.pdf"'
 
     return response
+
+@api_view(['GET'])
+@authentication_classes([authentication.TokenAuthentication])
+@permission_classes([permissions.IsAuthenticated])
+def send_reminder(request, invoice_id):
+    invoice = get_object_or_404(Invoice, pk=invoice_id, created_by=request.user)
+    team = Team.objects.filter(created_by=request.user).first()
+
+    subject = "Unpaid invoice"
+
+    from_email = team.email
+    to = [invoice.client.email]
+    text_content = 'You have an unpaid invoice. Invoice number: #' + str(invoice.invoice_number)
+    html_content = 'You have an unpaid invoice. Invoice number: #' + str(invoice.invoice_number)
+
+    msg = EmailMultiAlternatives(subject, text_content, from_email, to)
+    msg.attach_alternative(html_content, "text/html")
+
+    template = get_template('pdf.html')
+    html = template.render({'invoice': invoice, 'team': team})
+    config = pdfkit.configuration(wkhtmltopdf='C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe')
+    pdf = pdfkit.from_string(html, False, options={}, configuration=config)
+
+    if pdf:
+        name = 'invoice_%s.pdf' % invoice.invoice_number
+        msg.attach(name, pdf, 'application/pdf')
+    
+    msg.send()
+
+    return Response()
